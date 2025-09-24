@@ -140,11 +140,12 @@
                 const response = await fetch(CONFIG.apiUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.61(0x18003d39) NetType/WIFI Language/zh-CN',
-                        'Origin': 'http://www.szlzxn.vip',
-                        'X-Requested-With': 'com.tencent.mm',
-                        'Referer': 'http://www.szlzxn.vip/wx/indexn.html',
+                        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.61(0x18003d39) NetType/WIFI Language/zh_CN",
+                        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        "Accept": "*/*",
+                        "X-Requested-With": "com.tencent.mm",
+                        "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"
+                        // 注意: Host, Origin, Referer 等头部由浏览器自动管理，此处无需也无法设置
                     },
                     body: new URLSearchParams({ areaId, devaddress })
                 });
