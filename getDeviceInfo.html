@@ -21,8 +21,8 @@
             <p>Re区域ID：<span id="areaId" class="font-medium text-gray-700">--</span></p>
             <p>区域名称：<span id="areaName" class="font-medium text-gray-700">--</span></p>
             <p>设备地址：<span id="devdescript" class="font-medium text-gray-700">--</span></p>
-            <p>状态码：<span id="portstatur" class="font-medium text-gray-700">--</span></p>
             <p>最后更新：<span id="updateTime" class="font-medium text-gray-700">加载中...</span></p>
+            <p>状态码：<span id="portstatur" class="font-medium text-gray-700">--</span></p>
         </div>
     </div>
 
@@ -81,7 +81,8 @@
                         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.61(0x18003d39) NetType/WIFI Language/zh-CN',
                         'Origin': 'http://www.szlzxn.vip',
-                        'X-Requested-With': 'com.tencent.mm'
+                        'X-Requested-With': 'com.tencent.mm',
+                        'Referer': 'http://www.szlzxn.vip/wx/indexn.html',
                     },
                     body: new URLSearchParams(CONFIG.requestParams)
                 });
