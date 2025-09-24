@@ -3,73 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>设备状态</title>
+    <title>多设备端口状态监控</title>
+    <script src="./cdn.tailwindcss.com.js"></script>
     <style>
-    
-        body {
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .iframe-container {
-            display: flex;
-            gap: 15px; /* 网页之间的间距 */
-            overflow-x: auto; /* 屏幕过窄时显示横向滚动条 */
-            padding-bottom: 15px;
-        }
-        .iframe-item {
-            flex: 1;
-            min-width: 300px; /* 最小宽度，避免过窄 */
-            height: 2300px /* 嵌入网页的高度 */
-        }
-        .iframe-item0 {
-            flex: 1;
-            min-width: 300px; /* 最小宽度，避免过窄 */
-            height: 800px /* 嵌入网页的高度 */
-        }
-        iframe {
-            width: 100%;
-            height: 55%;
-            border: none; /* 去除iframe默认边框 */
-            border-radius: 8px; /* 可选：添加圆角 */
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* 可选：添加阴影 */
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
+        .port-card { transition: all 0.3s ease; }
+        .status-normal { background-color: #dcfce7; border-color: #22c55e; } /* 0-空闲（绿色） */
+        .status-idle { background-color: #f3f4f6; border-color: #9ca3af; }    /* 1-占用/3-浮充（灰色） */
+        .status-error { background-color: #fee2e2; border-color: #ef4444; }  /* 2-故障（红色） */
+
+        /* 自定义设备卡片容器最小高度，防止刷新时跳动 */
+        .device-card-container { min-height: 280px; }
     </style>
 </head>
-<body>
-    <h1></h1>
-    <div class="iframe-container">
+<body class="bg-gray-100 min-h-screen p-4">
 
-        <div class="iframe-item">
-            <iframe class="iframe-item0" src="getDeviceInfo.html?devaddress=40965408&portCount=10"></iframe>
-            <iframe src="getDeviceInfo.html?devaddress=41065483&portCount=20"></iframe>
-            <iframe src="getDeviceInfo.html?devaddress=41065482&portCount=20"></iframe>
-        </div>
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">设备状态监控面板</h1>
 
-        <div class="iframe-item">
-            <iframe class="iframe-item0" src="getDeviceInfo.html?devaddress=40965407&portCount=10"></iframe>
-            <iframe src="getDeviceInfo.html?devaddress=41065485&portCount=20"></iframe>
-            <iframe src="getDeviceInfo.html?devaddress=41065484&portCount=20"></iframe>
-        </div>
+        <!-- 设备容器 - 第一行 (4个) -->
+        <div id="deviceRow1" class="flex flex-wrap -mx-2 mb-4"></div>
+        
+        <!-- 设备容器 - 第二行 (3个) -->
+        <div id="deviceRow2" class="flex flex-wrap -mx-2 mb-4"></div>
 
-        <div class="iframe-item">
-            <iframe class="iframe-item0" src="getDeviceInfo.html?devaddress=40965406&portCount=10"></iframe>
-            <iframe src="getDeviceInfo.html?devaddress=41065478&portCount=20"></iframe>
-            <iframe src="getDeviceInfo.html?devaddress=41065479&portCount=20"></iframe>
-        </div>
-
-        <div class="iframe-item">
-            <iframe class="iframe-item0" src="getDeviceInfo.html?devaddress=40965409&portCount=10"></iframe>
-        </div>
+        <!-- 设备容器 - 第三行 (3个) -->
+        <div id="deviceRow3" class="flex flex-wrap -mx-2"></div>
     </div>
-    
 
+
+    <script>
+        // 核心配置
+        const CONFIG = {
+            apiUrl: 'http://www.szlzxn.vip/wxn/getDeviceInfo',
+            // --- 在这里配置您需要监控的设备列表 ---
+            // devaddress 必须是唯一的，用作每个设备的标识符
+            devices: [
+                // 第一行
+                { areaId: '1209', devaddress: '40965408', portCount: 10 },
+                { areaId: '1209', devaddress: '40965407', portCount: 10 },
+                { areaId: '1209', devaddress: '40965406', portCount: 10 },
+                { areaId: '1209', devaddress: '40965409', portCount: 10 },
+                // 第二行
+                { areaId: '1209', devaddress: '41065483', portCount: 20 },
+                { areaId: '1209', devaddress: '41065485', portCount: 20 },
+                { areaId: '1209', devaddress: '41065478', portCount: 20 },
+                // 第三行
+                { areaId: '1209', devaddress: '41065482', portCount: 20 },
+                { areaId: '1209', devaddress: '41065484', portCount: 20 },
+                { areaId: '1209', devaddress: '41065479', portCount: 20 },
+            ],
+            refreshInterval: 10000 // 自动刷新间隔（毫秒），10秒
+        };
+
+        // 状态映射配置
+        const STATUS_MAP = {
+            '0': { text: '空闲', class: 'status-normal', color: 'text-green-600' },
+            '1': { text: '占用', class: 'status-idle', color: 'text-gray-600' },
+            '2': { text: '故障', class: 'status-error', color: 'text-red-600' },
+            '3': { text: '浮充', class: 'status-idle', color: 'text-red-600' },
+            'default': { text: '未知', class: 'border-gray-300 bg-gray-50', color: 'text-gray-400' }
+        };
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDeviceGrid();
+            fetchAllDeviceStatuses();
+            setInterval(fetchAllDeviceStatuses, CONFIG.refreshInterval);
+        });
+
+        // 动态创建所有设备卡片到网格中
+        function initializeDeviceGrid() {
+            const rows = [
+                { container: document.getElementById('deviceRow1'), count: 4, itemClass: 'w-full md:w-1/2 lg:w-1/4 px-2 mb-4' },
+                { container: document.getElementById('deviceRow2'), count: 3, itemClass: 'w-full md:w-1/2 lg:w-1/3 px-2 mb-4' },
+                { container: document.getElementById('deviceRow3'), count: 3, itemClass: 'w-full md:w-1/2 lg:w-1/3 px-2 mb-4' }
+            ];
+
+            let deviceIndex = 0;
+            rows.forEach(row => {
+                const devicesForRow = CONFIG.devices.slice(deviceIndex, deviceIndex + row.count);
+                devicesForRow.forEach(device => {
+                    const deviceCardWrapper = document.createElement('div');
+                    deviceCardWrapper.className = row.itemClass;
+                    deviceCardWrapper.innerHTML = createDeviceCardHTML(device.devaddress);
+                    row.container.appendChild(deviceCardWrapper);
+                });
+                deviceIndex += row.count;
+            });
+        }
+        
+        // 创建单个设备卡片的HTML结构
+        function createDeviceCardHTML(devaddress) {
+            // 使用 devaddress 作为唯一ID
+            return `
+                <div class="bg-white rounded-lg shadow-md h-full flex flex-col device-card-container">
+                    <!-- 设备基本信息 -->
+                    <div class="p-4 border-b">
+                        <h2 class="text-lg font-bold text-gray-800 truncate" id="devName-${devaddress}">设备加载中...</h2>
+                        <div class="text-xs text-gray-500 grid grid-cols-2 gap-1 mt-2">
+                            <p>设备ID: <span id="devAddress-${devaddress}" class="font-medium text-gray-700">--</span></p>
+                            <p>Re区域ID: <span id="areaId-${devaddress}" class="font-medium text-gray-700">--</span></p>
+                            <p>地点: <span id="areaName-${devaddress}" class="font-medium text-gray-700">--</span></p>
+                            <p>区域: <span id="devdescript-${devaddress}" class="font-medium text-gray-700">--</span></p>
+                            <p>最后更新: <span id="updateTime-${devaddress}" class="font-medium text-gray-700">--</span></p>
+                            <p class="col-span-2">状态码: <span id="portstatur-${devaddress}" class="font-mono text-xs text-gray-600 break-all">--</span></p>
+                        </div>
+                    </div>
+                    <!-- 端口状态 -->
+                    <div class="p-4 flex-grow">
+                        <div id="loading-${devaddress}" class="text-center py-6 text-gray-500">加载状态中...</div>
+                        <div id="error-${devaddress}" class="text-center py-6 text-red-500 hidden">获取失败</div>
+                        <div id="portContainer-${devaddress}" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 hidden"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 获取所有设备的状态
+        function fetchAllDeviceStatuses() {
+            CONFIG.devices.forEach(device => fetchDeviceStatus(device));
+        }
+
+        // 获取单个设备状态
+        async function fetchDeviceStatus(device) {
+            const { areaId, devaddress, portCount } = device;
+            const loadingEl = document.getElementById(`loading-${devaddress}`);
+            const errorEl = document.getElementById(`error-${devaddress}`);
+            const portContainer = document.getElementById(`portContainer-${devaddress}`);
+
+            // 显示加载态
+            if (loadingEl) loadingEl.classList.remove('hidden');
+            if (errorEl) errorEl.classList.add('hidden');
+            if (portContainer) portContainer.classList.add('hidden');
+
+            try {
+                const response = await fetch(CONFIG.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: new URLSearchParams({ areaId, devaddress })
+                });
+
+                if (!response.ok) throw new Error(`接口请求失败: ${response.status}`);
+
+                const data = await response.json();
+                if (!data.success || !data.obj) throw new Error('接口返回数据异常');
+
+                const deviceData = data.obj;
+                updateDeviceBaseInfo(deviceData, devaddress);
+                renderPortStatus(deviceData.portstatur || '', devaddress, portCount);
+
+                // 切换显示状态
+                if (portContainer) portContainer.classList.remove('hidden');
+                if (loadingEl) loadingEl.classList.add('hidden');
+
+            } catch (err) {
+                console.error(`设备 ${devaddress} 状态获取失败:`, err);
+                if (errorEl) errorEl.classList.remove('hidden');
+                if (loadingEl) loadingEl.classList.add('hidden');
+                 // 也更新一下基础信息，以示错误
+                document.getElementById(`devName-${devaddress}`).textContent = '数据获取失败';
+                document.getElementById(`devName-${devaddress}`).classList.add('text-red-500');
+            }
+        }
+
+        // 更新指定设备的基本信息
+        function updateDeviceBaseInfo(data, devaddress) {
+            document.getElementById(`devName-${devaddress}`).textContent = data.devname || '未知设备';
+            document.getElementById(`devName-${devaddress}`).classList.remove('text-red-500');
+            document.getElementById(`areaId-${devaddress}`).textContent = data.areaid || '--';
+            document.getElementById(`areaName-${devaddress}`).textContent = data.areaName || '--';
+            document.getElementById(`devdescript-${devaddress}`).textContent = data.devdescript || '--';
+            document.getElementById(`devAddress-${devaddress}`).textContent = data.devaddress || '--';
+            document.getElementById(`portstatur-${devaddress}`).textContent = data.portstatur || '--';
+            document.getElementById(`updateTime-${devaddress}`).textContent = new Date().toLocaleTimeString();
+        }
+
+        // 渲染指定设备的端口状态
+        function renderPortStatus(portStaturStr, devaddress, portCount) {
+            const container = document.getElementById(`portContainer-${devaddress}`);
+            if (!container) return;
+            container.innerHTML = '';
+
+            for (let i = 0; i < portCount; i++) {
+                const portNum = i + 1;
+                const statusCode = portStaturStr[i] || 'default';
+                const status = STATUS_MAP[statusCode] || STATUS_MAP.default;
+
+                const portCard = document.createElement('div');
+                portCard.className = `port-card ${status.class} rounded-md border p-2 text-center`;
+                portCard.innerHTML = `
+                    <div class="font-bold text-gray-800 text-sm">端口 ${portNum}</div>
+                    <div class="mt-1 text-xs ${status.color}">${status.text}</div>
+                `;
+                container.appendChild(portCard);
+            }
+        }
+    </script>
 </body>
-
-
 </html>
