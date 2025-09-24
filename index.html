@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备状态</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .iframe-container {
+            display: flex;
+            gap: 15px; /* 网页之间的间距 */
+            overflow-x: auto; /* 屏幕过窄时显示横向滚动条 */
+            padding-bottom: 15px;
+        }
+        .iframe-item {
+            flex: 1;
+            min-width: 20vw; /* 最小宽度，避免过窄 */
+            height: 40vh; /* 嵌入网页的高度 */
+        }
+        .iframe-item2 {
+            flex: 1;
+            min-width: 20vw; /* 最小宽度，避免过窄 */
+            height: 60vh; /* 嵌入网页的高度 */
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none; /* 去除iframe默认边框 */
+            border-radius: 8px; /* 可选：添加圆角 */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* 可选：添加阴影 */
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1></h1>
+    <div class="iframe-container">
+
+        <div class="iframe-item">
+            <iframe src="getDeviceInfo.html?devaddress=40965408&portCount=10"></iframe>
+        </div>
+
+        <div class="iframe-item">
+            <iframe src="getDeviceInfo.html?devaddress=40965407&portCount=10"></iframe>
+        </div>
+
+        <div class="iframe-item">
+            <iframe src="getDeviceInfo.html?devaddress=40965406&portCount=10"></iframe>
+        </div>
+
+        <div class="iframe-item">
+            <iframe src="getDeviceInfo.html?devaddress=40965409&portCount=10"></iframe>
+        </div>
+    </div>
+    
+    
+    <div class="iframe-container">
+
+        <div class="iframe-item2">
+            <iframe src="getDeviceInfo.html?devaddress=41065485&portCount=20"></iframe>
+        </div>
+
+        <div class="iframe-item2">
+            <iframe src="getDeviceInfo.html?devaddress=41065484&portCount=20"></iframe>
+        </div>
+
+        <div class="iframe-item2">
+            <iframe src="getDeviceInfo.html?devaddress=41065483&portCount=20"></iframe>
+        </div>
+
+        <div class="iframe-item2">
+            <iframe src="getDeviceInfo.html?devaddress=41065482&portCount=20"></iframe>
+        </div>
+        
+        
+        <div class="iframe-item2">
+            <iframe src="getDeviceInfo.html?devaddress=41065479&portCount=20"></iframe>
+        </div>
+        
+        
+        <div class="iframe-item2">
+            <iframe src="getDeviceInfo.html?devaddress=41065478&portCount=20"></iframe>
+        </div>
+    </div>
+</body>
+
+
+</html>

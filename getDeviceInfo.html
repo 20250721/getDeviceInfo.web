@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备端口状态监控</title>
+    <script src="./cdn.tailwindcss.com.js"></script>
+    <style>
+        .port-card { transition: all 0.3s ease; }
+        .status-normal { background-color: #dcfce7; border-color: #22c55e; } /* 1-正常（绿色） */
+        .status-idle { background-color: #f3f4f6; border-color: #9ca3af; }    /* 0-空闲（灰色） */
+        .status-error { background-color: #fee2e2; border-color: #ef4444; }  /* 2-故障（红色） */
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4">
+    <!-- 设备基本信息 -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <h1 class="text-xl font-bold text-gray-800 mb-2" id="devName">设备状态监控</h1>
+        <div class="text-sm text-gray-500 grid grid-cols-2 gap-2">
+            <p>设备ID：<span id="devAddress" class="font-medium text-gray-700">--</span></p>
+            <p>Re区域ID：<span id="areaId" class="font-medium text-gray-700">--</span></p>
+            <p>区域名称：<span id="areaName" class="font-medium text-gray-700">--</span></p>
+            <p>设备地址：<span id="devdescript" class="font-medium text-gray-700">--</span></p>
+            <p>状态码：<span id="portstatur" class="font-medium text-gray-700">--</span></p>
+            <p>最后更新：<span id="updateTime" class="font-medium text-gray-700">加载中...</span></p>
+        </div>
+    </div>
+
+    <!-- 加载/错误提示 -->
+    <div id="loading" class="text-center py-6 text-gray-600">加载设备状态中...</div>
+    <div id="error" class="text-center py-6 text-red-500 hidden">获取设备状态失败，请重试</div>
+
+    <!-- 端口状态容器 -->
+    <div id="portContainer" class="grid grid-cols-2 md:grid-cols-5 gap-3 hidden">
+        
+    </div>
+
+    <script>
+        
+        
+        
+        
+        // 核心配置
+        const CONFIG = {
+            apiUrl: 'http://www.szlzxn.vip/wxn/getDeviceInfo',
+            requestParams: { areaId: '', devaddress: '' },
+            portCount: parseInt(new URLSearchParams(window.location.search).get('portCount')) || 10, // 端口数
+            
+        };
+
+        // 状态映射配置
+        const STATUS_MAP = {
+            '1': { text: '占用', class: 'status-idle', color: 'text-gray-600' },
+            '0': { text: '空闲', class: 'status-normal', color: 'text-green-600' },
+            '2': { text: '故障', class: 'status-error', color: 'text-red-600' },
+            '3': { text: '浮充', class: 'status-idle', color: 'text-red-600' },
+            'default': { text: '未知', class: 'border-gray-300 bg-gray-50', color: 'text-gray-400' }
+        };
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDeviceStatus();
+            setInterval(fetchDeviceStatus, 10000); // 10秒自动刷新
+        });
+
+        // 获取设备状态（适配真实接口返回结构）
+        async function fetchDeviceStatus() {
+            const loadingEl = document.getElementById('loading');
+            const errorEl = document.getElementById('error');
+            const portContainer = document.getElementById('portContainer');
+
+            // 显示加载态
+            loadingEl.classList.remove('hidden');
+            errorEl.classList.add('hidden');
+            portContainer.classList.add('hidden');
+
+            try {
+                const response = await fetch(CONFIG.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.61(0x18003d39) NetType/WIFI Language/zh-CN',
+                        'Origin': 'http://www.szlzxn.vip',
+                        'X-Requested-With': 'com.tencent.mm'
+                    },
+                    body: new URLSearchParams(CONFIG.requestParams)
+                });
+
+                if (!response.ok) throw new Error(`接口请求失败：${response.status}`);
+
+                const data = await response.json();
+                // 校验接口返回是否成功
+                if (!data.success || !data.obj) throw new Error('接口返回数据异常');
+
+                const deviceData = data.obj;
+                // 更新设备基本信息（从接口返回中提取）
+                updateDeviceBaseInfo(deviceData);
+                // 渲染20个端口状态（portstatur字符串截取前20位）
+                renderPortStatus(deviceData.portstatur || '');
+
+                // 切换显示状态
+                portContainer.classList.remove('hidden');
+                loadingEl.classList.add('hidden');
+
+            } catch (err) {
+                console.error('状态获取失败：', err);
+                errorEl.classList.remove('hidden');
+                loadingEl.classList.add('hidden');
+            }
+        }
+
+        // 更新设备基本信息
+        function updateDeviceBaseInfo(data) {
+            document.getElementById('devName').textContent = data.devname || '未知设备';
+            document.getElementById('areaId').textContent = data.areaid || '--';
+            document.getElementById('devAddress').textContent = data.devaddress || '--';
+            document.getElementById('devdescript').textContent = data.devdescript || '--';
+            document.getElementById('areaName').textContent = data.areaName || '--';
+            document.getElementById('portstatur').textContent = data.portstatur || '--';
+            document.getElementById('updateTime').textContent = new Date().toLocaleString();
+        }
+
+        // 渲染10个端口状态（核心：解析portstatur字符串）
+        function renderPortStatus(portStaturStr) {
+            const container = document.getElementById('portContainer');
+            container.innerHTML = '';
+
+            // 循环生成1-10号端口
+            for (let i = 0; i < CONFIG.portCount; i++) {
+                const portNum = i + 1;
+                // 获取当前端口的状态码（截取字符串对应位置，无则默认未知）
+                const statusCode = portStaturStr[i] || 'default';
+                // 匹配状态配置
+                const status = STATUS_MAP[statusCode] || STATUS_MAP.default;
+
+                // 创建端口卡片
+                const portCard = document.createElement('div');
+                portCard.className = `port-card ${status.class} rounded-lg border p-4`;
+                portCard.innerHTML = `
+                    <div class="font-bold text-gray-800 text-center">端口 ${portNum}</div>
+                    <div class="mt-2 text-sm ${status.color} text-center">
+                        状态：${status.text}
+                    </div>
+                `;
+                container.appendChild(portCard);
+            }
+        }
+        
+        // 核心逻辑：从URL参数中提取并赋值
+        const urlParams = new URLSearchParams(window.location.search);
+        // 分别获取两个参数的值，若参数不存在则保持空字符串（与初始值一致）
+        CONFIG.requestParams.areaId = urlParams.get('areaId') || '1209';
+        CONFIG.requestParams.portCount = urlParams.get('portcounts') || '20';
+        CONFIG.requestParams.devaddress = urlParams.get('devaddress') || '';
+        
+        
+    </script>
+</body>
+</html>
