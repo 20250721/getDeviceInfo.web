@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多设备端口状态监控</title>
     <script src="./cdn.tailwindcss.com.js"></script>
+    <script src="./nosleep.js"></script>
     <style>
         .port-card { transition: all 0.3s ease; }
         .status-normal { background-color: #dcfce7; border-color: #22c55e; } /* 0-空闲（绿色） */
@@ -28,6 +29,17 @@
 
         <!-- 设备容器 - 第三行 (3个) -->
         <div id="deviceRow3" class="flex flex-wrap -mx-2"></div>
+        
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">
+        <button id="toggleBtn" class="w-4/5 max-w-xs py-4 px-6 bg-blue-500 text-white rounded-xl font-medium text-lg shadow-lg hover:bg-blue-600 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2">
+    激活屏幕常亮
+  </button>
+
+  <!-- 状态提示文本 -->
+        <p id="statusText" class="mt-6 text-gray-600 text-base text-center">
+    点击按钮开启/关闭屏幕常亮功能
+        </p>
+        </h1>
     </div>
 
 
@@ -200,6 +212,80 @@
                 container.appendChild(portCard);
             }
         }
+        
+        
+        
+        
+    let wakeLock = null;
+    const noSleep = new NoSleep();
+    const toggleBtn = document.getElementById('toggleBtn');
+    const statusText = document.getElementById('statusText');
+    const isWakeLockSupported = 'wakeLock' in navigator;
+
+    // 按钮点击事件
+    toggleBtn.addEventListener('click', async () => {
+      if (isWakeLockSupported) {
+        // 现代浏览器：使用 Wake Lock API
+        if (!wakeLock) {
+          try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            updateUI(true); // 切换到“已激活”状态
+          } catch (err) {
+            statusText.textContent = '激活失败，请重试';
+            statusText.classList.replace('text-gray-600', 'text-red-500');
+          }
+        } else {
+          wakeLock.release();
+          wakeLock = null;
+          updateUI(false); // 切换到“已关闭”状态
+        }
+      } else {
+        // 旧浏览器：使用 NoSleep.js
+        if (!noSleep.isEnabled()) {
+          noSleep.enable();
+          updateUI(true);
+        } else {
+          noSleep.disable();
+          updateUI(false);
+        }
+      }
+    });
+
+    // 页面可见性变化处理
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible') {
+        if (isWakeLockSupported && !wakeLock && toggleBtn.textContent.includes('关闭')) {
+          await navigator.wakeLock.request('screen').then(lock => {
+            wakeLock = lock;
+          }).catch(() => {
+            statusText.textContent = '页面切换后需重新激活';
+          });
+        }
+      }
+    });
+
+    // 更新按钮样式和状态文本
+    function updateUI(isActive) {
+      if (isActive) {
+        // 激活状态：按钮变绿色，文本更新
+        toggleBtn.classList.replace('bg-blue-500', 'bg-green-500');
+        toggleBtn.classList.replace('hover:bg-blue-600', 'hover:bg-green-600');
+        toggleBtn.classList.replace('focus:ring-blue-400', 'focus:ring-green-400');
+        toggleBtn.textContent = '关闭屏幕常亮';
+        statusText.textContent = '✅ 屏幕常亮已激活，放心使用～';
+        statusText.classList.replace('text-gray-600', 'text-green-600');
+      } else {
+        // 关闭状态：按钮恢复蓝色，文本更新
+        toggleBtn.classList.replace('bg-green-500', 'bg-blue-500');
+        toggleBtn.classList.replace('hover:bg-green-600', 'hover:bg-blue-600');
+        toggleBtn.classList.replace('focus:ring-green-400', 'focus:ring-blue-400');
+        toggleBtn.textContent = '激活屏幕常亮';
+        statusText.textContent = '❌ 屏幕常亮已关闭，屏幕将正常休眠';
+        statusText.classList.replace('text-green-600', 'text-gray-600');
+      }
+    }
+        
+
     </script>
 </body>
 </html>
